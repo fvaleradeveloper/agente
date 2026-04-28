@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <title>📷 Reporte de Vigilancia</title>
+  <style>
+    :root { --bg: #1e293b; --card: #334155; --primary: #0f172a; --accent: #3b82f6; --text: #f8fafc; --success: #16a34a; --error: #dc2626; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 1rem; min-height: 100vh; }
+    h1 { text-align: center; margin-bottom: 1rem; font-size: 1.3rem; }
+    .container { max-width: 500px; margin: 0 auto; }
+    .preview-box { background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3; position: relative; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; }
+    video, img, .placeholder { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.85rem; gap: 0.4rem; }
+    .controls { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    button { padding: 0.7rem 1rem; border: none; border-radius: 10px; cursor: pointer; font-weight: 500; font-size: 0.85rem; transition: 0.2s; }
+    button:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-secondary { background: var(--card); color: var(--text); }
+    .btn-danger { background: var(--error); color: white; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 0.4rem; font-weight: 500; font-size: 0.85rem; }
+    input { width: 100%; padding: 0.7rem; border-radius: 10px; border: 1px solid var(--card); background: var(--primary); color: var(--text); font-size: 0.95rem; }
+    .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem; margin-bottom: 1rem; }
+    .option-btn { padding: 0.6rem; background: var(--card); border: 2px solid transparent; border-radius: 10px; cursor: pointer; text-align: center; font-size: 0.8rem; transition: 0.2s; }
+    .option-btn.selected { border-color: var(--accent); background: rgba(59,130,246,0.15); color: #60a5fa; }
+    #status { margin-top: 1rem; padding: 0.7rem; border-radius: 10px; text-align: center; min-height: 2.2rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; }
+    .success { background: var(--success); color: white; }
+    .error { background: var(--error); color: white; }
+    .info { background: var(--card); color: var(--text); }
+    footer { text-align: center; margin-top: 2rem; font-size: 0.7rem; color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ Reporte de Vigilancia</h1>
+    
+    <div class="preview-box">
+      <video id="camera" autoplay playsinline muted></video>
+      <img id="preview" alt="Vista previa">
+      <div class="placeholder" id="placeholder">📷 Inicie la cámara</div>
+    </div>
+
+    <div class="controls">
+      <button id="btnStart" class="btn-primary">📱 Cámara</button>
+      <button id="btnPhoto" class="btn-secondary" disabled>📸 Foto</button>
+      <button id="btnVideo" class="btn-secondary" disabled>🎥 Video 3s</button>      <button id="btnReset" class="btn-danger" disabled>🗑️ Limpiar</button>
+    </div>
+
+    <div class="form-group">
+      <label for="chatId">ID de Chat / Grupo / Canal (Telegram)</label>
+      <input type="text" id="chatId" placeholder="Ej: 123456789 o -100123456789">
+    </div>
+
+    <label>Estado del reporte:</label>
+    <div class="options-grid" id="options">
+      <button class="option-btn" data-value="Sin novedad">Sin novedad</button>
+      <button class="option-btn" data-value="Mucha gente alrededor">Mucha gente</button>
+      <button class="option-btn" data-value="Situación sospechosa">Situación sospechosa</button>
+      <button class="option-btn" data-value="Accidente reportado">Accidente</button>
+      <button class="option-btn" data-value="Zona restringida">Zona restringida</button>
+      <button class="option-btn" data-value="Requiere apoyo inmediato">Apoyo urgente</button>
+    </div>
+
+    <button id="btnSend" class="btn-primary" style="width:100%; margin-top:0.5rem; padding: 0.9rem;" disabled>📤 Enviar Silencioso a Telegram</button>
+    <div id="status" class="info">Esperando interacción...</div>
+    <footer>Funciona en HTTPS. Envío directo sin abrir apps.</footer>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const camera = $('camera'), preview = $('preview'), placeholder = $('placeholder');
+    const btnStart = $('btnStart'), btnPhoto = $('btnPhoto'), btnVideo = $('btnVideo'), btnReset = $('btnReset'), btnSend = $('btnSend');
+    const chatIdInput = $('chatId'), optionsGrid = $('options'), status = $('status');
+
+    let stream = null, selectedOption = null, mediaBlob = null, mediaType = null;
+    let mediaRecorder = null, recordedChunks = [];
+
+    const showStatus = (msg, type = 'info') => {
+      status.textContent = msg; status.className = type;
+    };
+
+    const updateUI = () => {
+      const ready = selectedOption && chatIdInput.value.trim() && mediaBlob;
+      btnSend.disabled = !ready;
+    };
+
+    btnStart.addEventListener('click', async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+        camera.srcObject = stream; camera.style.display = 'block'; placeholder.style.display = 'none';
+        btnStart.disabled = true; btnPhoto.disabled = false; btnVideo.disabled = false;
+        showStatus('✅ Cámara activa. Capture foto o video.', 'info');
+      } catch (err) {
+        showStatus('❌ Permiso denegado. Use HTTPS y permita cámara.', 'error');
+      }    });
+
+    btnPhoto.addEventListener('click', () => {
+      const c = document.createElement('canvas');
+      c.width = camera.videoWidth; c.height = camera.videoHeight;
+      c.getContext('2d').drawImage(camera, 0, 0);
+      c.toBlob(blob => {
+        mediaBlob = blob; mediaType = 'image';
+        preview.src = URL.createObjectURL(blob); preview.style.display = 'block'; camera.style.display = 'none';
+        btnReset.disabled = false; updateUI(); showStatus('📸 Foto capturada.', 'success');
+      }, 'image/jpeg', 0.85);
+    });
+
+    btnVideo.addEventListener('click', () => {
+      if (!stream) return;
+      recordedChunks = [];
+      const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+      mediaRecorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 2500000 });
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        mediaBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+        mediaType = 'video';
+        preview.src = URL.createObjectURL(mediaBlob); preview.style.display = 'block'; camera.style.display = 'none';
+        btnReset.disabled = false; updateUI(); showStatus('🎥 Video capturado (3s).', 'success');
+      };
+      mediaRecorder.start(); showStatus('⏳ Grabando...', 'info');
+      setTimeout(() => { if(mediaRecorder?.state === 'recording') mediaRecorder.stop(); }, 3000);
+    });
+
+    btnReset.addEventListener('click', () => {
+      mediaBlob = null; mediaType = null; preview.src = ''; preview.style.display = 'none';
+      if (stream) { camera.srcObject = stream; camera.style.display = 'block'; }
+      else placeholder.style.display = 'flex';
+      btnReset.disabled = true; updateUI(); showStatus('🗑️ Listo para nuevo registro.', 'info');
+    });
+
+    optionsGrid.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        optionsGrid.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected'); selectedOption = btn.dataset.value; updateUI();
+      });
+    });
+
+    btnSend.addEventListener('click', async () => {
+      const chatId = chatIdInput.value.trim();
+      if (!chatId || !selectedOption || !mediaBlob) {
+        showStatus('❌ Complete todos los campos y capture media.', 'error'); return;
+      }
+
+      showStatus('⏳ Procesando y enviando...', 'info'); btnSend.disabled = true;
+      try {
+        const base64 = await new Promise((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result);
+          reader.onerror = rej;
+          reader.readAsDataURL(mediaBlob);
+        });
+
+        const res = await fetch('/api/send-telegram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, status: selectedOption, mediaType, base64 })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Fallo en servidor');
+        showStatus('✅ Enviado silenciosamente a Telegram.', 'success');
+      } catch (err) {
+        showStatus(`❌ ${err.message}`, 'error');
+      } finally {
+        btnSend.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
