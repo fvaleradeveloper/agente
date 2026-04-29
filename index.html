@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0f172a">
-  <title>📷 Vigilante - Collage de fotos a WhatsApp</title>
+  <title>📷 Vigilante - Collage automático a WhatsApp</title>
   <style>
     :root { --bg: #1e293b; --card: #334155; --primary: #0f172a; --accent: #3b82f6; --text: #f8fafc; --success: #16a34a; --error: #dc2626; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
@@ -42,8 +42,6 @@
     .counter { font-size: 0.9rem; text-align: center; margin-bottom: 0.5rem; font-weight: bold; background: var(--primary); padding: 0.3rem; border-radius: 30px; }
     .flex-btns { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
     .flex-btns button { flex: 1; }
-    .toggle-collage { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem; background: var(--primary); padding: 0.4rem; border-radius: 40px; }
-    .toggle-collage label { font-size: 0.8rem; }
   </style>
 </head>
 <body>
@@ -74,12 +72,6 @@
     <div class="counter" id="photoCounter">Fotos: 0 / 3</div>
     <div class="photo-strip" id="photoStrip"></div>
 
-    <!-- Selector Collage vs individual (por defecto collage activado) -->
-    <div class="toggle-collage">
-      <input type="checkbox" id="useCollage" checked>
-      <label for="useCollage">🎨 Enviar como collage (una sola imagen con todas las fotos)</label>
-    </div>
-
     <label>Comentario preestablecido (obligatorio):</label>
     <div class="options-grid" id="options">
       <button class="option-btn" data-value="Sin novedad">Sin novedad</button>
@@ -95,13 +87,12 @@
       <input type="text" id="extraComment" placeholder="Ej: Vehículo patente ABC-123...">
     </div>
 
-    <button id="btnSend" class="btn-primary" style="width:100%; padding: 0.9rem;" disabled>📤 Compartir collage + comentario (único mensaje)</button>
+    <button id="btnSend" class="btn-primary" style="width:100%; padding: 0.9rem;" disabled>📤 Enviar collage + comentario (único mensaje)</button>
     <div id="status" class="info">Esperando interacción...</div>
-    <footer>Al enviar, se combinarán las fotos en una sola imagen (collage) para que WhatsApp muestre todo junto y el comentario aparezca una sola vez.</footer>
+    <footer>✅ Ahora el comentario sale una sola vez, y todas las fotos se combinan en una imagen (collage). Funciona igual en PC y móvil.</footer>
   </div>
 
   <script>
-    // ---------- Elementos DOM ----------
     const $ = id => document.getElementById(id);
     const camera = $('camera');
     const placeholder = $('placeholder');
@@ -116,15 +107,12 @@
     const extraCommentInput = $('extraComment');
     const statusDiv = $('status');
     const qtyBtns = document.querySelectorAll('.qty-btn');
-    const useCollageCheck = $('useCollage');
 
-    // ---------- Estado ----------
     let stream = null;
     let capturedImages = []; // { blob, url }
     let selectedOption = null;
-    let targetQty = 3;      // cantidad de fotos deseada (1,2 o 3)
+    let targetQty = 3;
 
-    // ---------- Funciones auxiliares ----------
     const showStatus = (msg, type = 'info') => {
       statusDiv.textContent = msg;
       statusDiv.className = type;
@@ -200,22 +188,20 @@
         updateUI();
         showStatus(`📸 Foto ${capturedImages.length}/${targetQty} guardada.`, 'success');
         if (capturedImages.length === targetQty) {
-          showStatus(`✅ Listo. Puedes enviar como collage.`, 'success');
+          showStatus(`✅ Listo. Se enviará un collage con las ${targetQty} foto(s).`, 'success');
         }
       }, 'image/jpeg', 0.85);
     };
 
-    // ---------- Crear collage (una sola imagen con todas las fotos) ----------
+    // Crear collage horizontal con todas las fotos
     const createCollageBlob = async (images) => {
       return new Promise((resolve, reject) => {
         if (!images.length) reject('No hay imágenes');
         if (images.length === 1) {
-          // Si es 1 foto, devolvemos la misma
           resolve(images[0].blob);
           return;
         }
         
-        // Cargar todas las imágenes como HTMLImageElement
         const imgElements = [];
         let loadedCount = 0;
         
@@ -224,14 +210,11 @@
           imgEl.onload = () => {
             loadedCount++;
             if (loadedCount === images.length) {
-              // Todas cargadas, dibujar collage
               const collageCanvas = document.createElement('canvas');
-              // Decidir layout: horizontal si son 2 o 3 (en fila)
-              // Para 2: dos columnas iguales; para 3: tres columnas iguales
               const numCols = images.length;
-              const targetHeight = 400; // altura fija para el collage
+              const targetHeight = 400;
               const imgWidths = imgElements.map(img => (img.width * targetHeight) / img.height);
-              const totalWidth = imgWidths.reduce((a, b) => a + b, 0) + (numCols - 1) * 10; // 10px de separación
+              const totalWidth = imgWidths.reduce((a, b) => a + b, 0) + (numCols - 1) * 10;
               
               collageCanvas.width = totalWidth;
               collageCanvas.height = targetHeight;
@@ -241,9 +224,9 @@
               
               let xOffset = 0;
               for (let i = 0; i < imgElements.length; i++) {
-                const imgEl = imgElements[i];
-                const w = (imgEl.width * targetHeight) / imgEl.height;
-                ctx.drawImage(imgEl, xOffset, 0, w, targetHeight);
+                const el = imgElements[i];
+                const w = (el.width * targetHeight) / el.height;
+                ctx.drawImage(el, xOffset, 0, w, targetHeight);
                 xOffset += w + 10;
               }
               
@@ -259,10 +242,10 @@
       });
     };
 
-    // ---------- Compartir a WhatsApp con collage opcional ----------
+    // Compartir collage (si hay más de 1 foto) o la única foto
     const shareToWhatsApp = async () => {
       if (capturedImages.length !== targetQty) {
-        showStatus(`⚠️ Debes tomar exactamente ${targetQty} foto(s). Ahora tienes ${capturedImages.length}.`, 'error');
+        showStatus(`⚠️ Debes tomar exactamente ${targetQty} foto(s).`, 'error');
         return;
       }
       if (!selectedOption) {
@@ -276,73 +259,46 @@
       if (extraCommentInput.value.trim()) {
         mensaje += `Detalle adicional: ${extraCommentInput.value.trim()}\n`;
       }
-      mensaje += `📅 ${fecha}\n📍 (Ubicación aproximada del dispositivo)\n📸 ${capturedImages.length} foto(s) incluida(s).`;
+      mensaje += `📅 ${fecha}\n📍 (Ubicación aproximada del dispositivo)\n📸 ${capturedImages.length} foto(s) en collage.`;
 
-      showStatus('🖼️ Preparando collage...', 'info');
+      showStatus('🖼️ Generando collage...', 'info');
       
       try {
         let fileToShare;
-        if (useCollageCheck.checked && capturedImages.length > 1) {
-          // Crear collage
+        if (capturedImages.length === 1) {
+          fileToShare = new File([capturedImages[0].blob], `reporte_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        } else {
           const collageBlob = await createCollageBlob(capturedImages);
           fileToShare = new File([collageBlob], `reporte_collage_${Date.now()}.jpg`, { type: 'image/jpeg' });
-        } else {
-          // Modo original: enviar todas las fotos individualmente (puede causar mensajes separados)
-          // Pero el usuario activó el collage para evitarlo. No obstante, si no quiere collage, enviamos array de files.
-          const files = capturedImages.map((img, i) => 
-            new File([img.blob], `reporte_${i+1}.jpg`, { type: 'image/jpeg' })
-          );
-          if (navigator.canShare && navigator.canShare({ files: files })) {
-            await navigator.share({
-              title: 'Reporte de Vigilancia',
-              text: mensaje,
-              files: files
-            });
-            showStatus('✅ Enviado (modo individual).', 'success');
-            return;
-          } else {
-            throw new Error('No soporta compartir múltiples archivos');
-          }
         }
         
-        // Compartir collage (un solo archivo)
         if (navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
           await navigator.share({
             title: 'Reporte de Vigilancia',
             text: mensaje,
             files: [fileToShare]
           });
-          showStatus('✅ ¡Enviado! Collage + comentario en un solo mensaje.', 'success');
+          showStatus('✅ ¡Enviado! Comentario único + collage con todas las fotos.', 'success');
         } else {
           throw new Error('No soporta compartir archivos');
         }
       } catch (err) {
         if (err.name !== 'AbortError') {
           console.error(err);
-          showStatus('❌ Error al compartir. Fallback: descarga manual.', 'error');
-          // Fallback: descargar collage o fotos
-          if (useCollageCheck.checked && capturedImages.length > 1) {
-            const collageBlob = await createCollageBlob(capturedImages);
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(collageBlob);
-            a.download = `reporte_collage.jpg`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-          } else {
-            capturedImages.forEach((img, i) => {
-              const a = document.createElement('a');
-              a.href = img.url;
-              a.download = `reporte_${i+1}.jpg`;
-              a.click();
-            });
-          }
+          showStatus('❌ Error al compartir. Descargando collage y copiando texto...', 'error');
+          const collageBlob = capturedImages.length === 1 ? capturedImages[0].blob : await createCollageBlob(capturedImages);
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(collageBlob);
+          a.download = `reporte_collage.jpg`;
+          a.click();
+          URL.revokeObjectURL(a.href);
           navigator.clipboard.writeText(mensaje);
-          showStatus('📋 Texto copiado y fotos descargadas. Adjúntalas manualmente en WhatsApp.', 'info');
+          showStatus('📋 Texto copiado. Adjunta la imagen descargada manualmente en WhatsApp.', 'info');
         }
       }
     };
 
-    // ---------- Cámara ----------
+    // Cámara
     const startCamera = async () => {
       try {
         if (stream) {
@@ -358,32 +314,21 @@
         showStatus(`✅ Cámara activa. Toma ${targetQty} foto(s).`, 'info');
         updateUI();
       } catch (err) {
-        console.error(err);
-        showStatus('❌ Permiso denegado o sin cámara. Usa HTTPS y permite el acceso.', 'error');
+        showStatus('❌ Permiso denegado. Usa HTTPS y permite la cámara.', 'error');
         btnStart.disabled = false;
       }
     };
 
-    // ---------- Cambiar cantidad objetivo ----------
     const setTargetQuantity = (qty) => {
       targetQty = qty;
       qtyBtns.forEach(btn => {
-        if (parseInt(btn.dataset.qty) === qty) {
-          btn.classList.add('selected');
-        } else {
-          btn.classList.remove('selected');
-        }
+        if (parseInt(btn.dataset.qty) === qty) btn.classList.add('selected');
+        else btn.classList.remove('selected');
       });
-      if (capturedImages.length > targetQty) {
-        clearImages();
-        showStatus(`Cambiaste a ${targetQty} foto(s). Se borraron las fotos sobrantes.`, 'info');
-      } else {
-        updateUI();
-        showStatus(`Ahora debes tomar ${targetQty} foto(s).`, 'info');
-      }
+      if (capturedImages.length > targetQty) clearImages();
+      updateUI();
     };
 
-    // ---------- Eventos ----------
     btnStart.addEventListener('click', startCamera);
     btnPhoto.addEventListener('click', takePhoto);
     btnUndo.addEventListener('click', undoLastPhoto);
@@ -391,10 +336,7 @@
     btnSend.addEventListener('click', shareToWhatsApp);
 
     qtyBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const qty = parseInt(btn.dataset.qty);
-        setTargetQuantity(qty);
-      });
+      btn.addEventListener('click', () => setTargetQuantity(parseInt(btn.dataset.qty)));
     });
 
     optionsGrid.querySelectorAll('.option-btn').forEach(btn => {
