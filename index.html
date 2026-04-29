@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0f172a">
-  <title>📷 Reporte de Vigilancia</title>
+  <title>📷 Vigilante - Collage de fotos a WhatsApp</title>
   <style>
     :root { --bg: #1e293b; --card: #334155; --primary: #0f172a; --accent: #3b82f6; --text: #f8fafc; --success: #16a34a; --error: #dc2626; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
@@ -12,50 +12,75 @@
     h1 { text-align: center; margin-bottom: 1rem; font-size: 1.3rem; }
     .container { max-width: 500px; margin: 0 auto; }
     .preview-box { background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3; position: relative; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; }
-    video, img, .placeholder { width: 100%; height: 100%; object-fit: cover; display: none; }
-    .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.85rem; gap: 0.4rem; }
+    video { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.85rem; gap: 0.4rem; height: 100%; text-align: center; padding: 1rem; }
     .controls { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
     button { padding: 0.7rem 1rem; border: none; border-radius: 10px; cursor: pointer; font-weight: 500; font-size: 0.85rem; transition: 0.2s; }
     button:active { transform: scale(0.98); }
     .btn-primary { background: var(--accent); color: white; }
     .btn-secondary { background: var(--card); color: var(--text); }
     .btn-danger { background: var(--error); color: white; }
+    .btn-warning { background: #eab308; color: #1e293b; }
     button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-    .form-group { margin-bottom: 1rem; }
-    label { display: block; margin-bottom: 0.4rem; font-weight: 500; font-size: 0.85rem; }
-    input { width: 100%; padding: 0.7rem; border-radius: 10px; border: 1px solid var(--card); background: var(--primary); color: var(--text); font-size: 0.95rem; }
+    .photo-strip { display: flex; gap: 0.6rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 0.25rem; }
+    .photo-item { position: relative; width: 90px; height: 90px; flex-shrink: 0; border-radius: 12px; overflow: hidden; background: var(--card); border: 2px solid transparent; }
+    .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-item .badge { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); border-radius: 20px; padding: 2px 6px; font-size: 0.7rem; }
+    .quantity-selector { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1rem; background: var(--primary); padding: 0.5rem; border-radius: 40px; }
+    .qty-btn { background: var(--card); padding: 0.4rem 1rem; border-radius: 30px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .qty-btn.selected { background: var(--accent); color: white; }
     .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem; margin-bottom: 1rem; }
     .option-btn { padding: 0.6rem; background: var(--card); border: 2px solid transparent; border-radius: 10px; cursor: pointer; text-align: center; font-size: 0.8rem; transition: 0.2s; }
     .option-btn.selected { border-color: var(--accent); background: rgba(59,130,246,0.15); color: #60a5fa; }
-    #status { margin-top: 1rem; padding: 0.7rem; border-radius: 10px; text-align: center; min-height: 2.2rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; }
+    .extra-comment { margin-bottom: 1rem; }
+    .extra-comment input { width: 100%; padding: 0.7rem; border-radius: 10px; border: 1px solid var(--card); background: var(--primary); color: var(--text); font-size: 0.9rem; }
+    #status { margin-top: 1rem; padding: 0.7rem; border-radius: 10px; text-align: center; min-height: 2.2rem; font-size: 0.85rem; }
     .success { background: var(--success); color: white; }
     .error { background: var(--error); color: white; }
     .info { background: var(--card); color: var(--text); }
     footer { text-align: center; margin-top: 2rem; font-size: 0.7rem; color: #64748b; }
+    .counter { font-size: 0.9rem; text-align: center; margin-bottom: 0.5rem; font-weight: bold; background: var(--primary); padding: 0.3rem; border-radius: 30px; }
+    .flex-btns { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .flex-btns button { flex: 1; }
+    .toggle-collage { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem; background: var(--primary); padding: 0.4rem; border-radius: 40px; }
+    .toggle-collage label { font-size: 0.8rem; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🛡️ Reporte de Vigilancia</h1>
+    <h1>🛡️ Reporte de Vigilancia → WhatsApp</h1>
     
     <div class="preview-box">
       <video id="camera" autoplay playsinline muted></video>
-      <img id="preview" alt="Vista previa">
-      <div class="placeholder" id="placeholder">📷 Inicie la cámara</div>
+      <div class="placeholder" id="placeholder">📷 Inicie la cámara<br>y elija cuántas fotos tomar (1,2 o 3)</div>
     </div>
 
     <div class="controls">
       <button id="btnStart" class="btn-primary">📱 Cámara</button>
-      <button id="btnPhoto" class="btn-secondary" disabled>📸 Foto</button>
-      <button id="btnVideo" class="btn-secondary" disabled>🎥 Video 3s</button>      <button id="btnReset" class="btn-danger" disabled>🗑️ Limpiar</button>
+      <button id="btnPhoto" class="btn-secondary" disabled>📸 Tomar foto</button>
     </div>
 
-    <div class="form-group">
-      <label for="chatId">ID de Chat / Grupo / Canal (Telegram)</label>
-      <input type="text" id="chatId" placeholder="Ej: 123456789 o -100123456789">
+    <div class="flex-btns">
+      <button id="btnUndo" class="btn-warning" disabled>↩️ Deshacer última</button>
+      <button id="btnReset" class="btn-danger" disabled>🗑️ Limpiar todo</button>
     </div>
 
-    <label>Estado del reporte:</label>
+    <div class="quantity-selector" id="quantitySelector">
+      <div class="qty-btn" data-qty="1">1 foto</div>
+      <div class="qty-btn" data-qty="2">2 fotos</div>
+      <div class="qty-btn selected" data-qty="3">3 fotos</div>
+    </div>
+
+    <div class="counter" id="photoCounter">Fotos: 0 / 3</div>
+    <div class="photo-strip" id="photoStrip"></div>
+
+    <!-- Selector Collage vs individual (por defecto collage activado) -->
+    <div class="toggle-collage">
+      <input type="checkbox" id="useCollage" checked>
+      <label for="useCollage">🎨 Enviar como collage (una sola imagen con todas las fotos)</label>
+    </div>
+
+    <label>Comentario preestablecido (obligatorio):</label>
     <div class="options-grid" id="options">
       <button class="option-btn" data-value="Sin novedad">Sin novedad</button>
       <button class="option-btn" data-value="Mucha gente alrededor">Mucha gente</button>
@@ -65,109 +90,325 @@
       <button class="option-btn" data-value="Requiere apoyo inmediato">Apoyo urgente</button>
     </div>
 
-    <button id="btnSend" class="btn-primary" style="width:100%; margin-top:0.5rem; padding: 0.9rem;" disabled>📤 Enviar Silencioso a Telegram</button>
+    <div class="extra-comment">
+      <label>Comentario adicional (opcional):</label>
+      <input type="text" id="extraComment" placeholder="Ej: Vehículo patente ABC-123...">
+    </div>
+
+    <button id="btnSend" class="btn-primary" style="width:100%; padding: 0.9rem;" disabled>📤 Compartir collage + comentario (único mensaje)</button>
     <div id="status" class="info">Esperando interacción...</div>
-    <footer>Funciona en HTTPS. Envío directo sin abrir apps.</footer>
+    <footer>Al enviar, se combinarán las fotos en una sola imagen (collage) para que WhatsApp muestre todo junto y el comentario aparezca una sola vez.</footer>
   </div>
 
   <script>
+    // ---------- Elementos DOM ----------
     const $ = id => document.getElementById(id);
-    const camera = $('camera'), preview = $('preview'), placeholder = $('placeholder');
-    const btnStart = $('btnStart'), btnPhoto = $('btnPhoto'), btnVideo = $('btnVideo'), btnReset = $('btnReset'), btnSend = $('btnSend');
-    const chatIdInput = $('chatId'), optionsGrid = $('options'), status = $('status');
+    const camera = $('camera');
+    const placeholder = $('placeholder');
+    const btnStart = $('btnStart');
+    const btnPhoto = $('btnPhoto');
+    const btnUndo = $('btnUndo');
+    const btnReset = $('btnReset');
+    const btnSend = $('btnSend');
+    const photoStrip = $('photoStrip');
+    const photoCounterSpan = $('photoCounter');
+    const optionsGrid = $('options');
+    const extraCommentInput = $('extraComment');
+    const statusDiv = $('status');
+    const qtyBtns = document.querySelectorAll('.qty-btn');
+    const useCollageCheck = $('useCollage');
 
-    let stream = null, selectedOption = null, mediaBlob = null, mediaType = null;
-    let mediaRecorder = null, recordedChunks = [];
+    // ---------- Estado ----------
+    let stream = null;
+    let capturedImages = []; // { blob, url }
+    let selectedOption = null;
+    let targetQty = 3;      // cantidad de fotos deseada (1,2 o 3)
 
+    // ---------- Funciones auxiliares ----------
     const showStatus = (msg, type = 'info') => {
-      status.textContent = msg; status.className = type;
+      statusDiv.textContent = msg;
+      statusDiv.className = type;
     };
 
     const updateUI = () => {
-      const ready = selectedOption && chatIdInput.value.trim() && mediaBlob;
-      btnSend.disabled = !ready;
+      btnPhoto.disabled = !stream || capturedImages.length >= targetQty;
+      btnUndo.disabled = capturedImages.length === 0;
+      btnReset.disabled = capturedImages.length === 0;
+      btnSend.disabled = !(capturedImages.length === targetQty && selectedOption);
+      photoCounterSpan.textContent = `Fotos: ${capturedImages.length} / ${targetQty}`;
     };
 
-    btnStart.addEventListener('click', async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
-        camera.srcObject = stream; camera.style.display = 'block'; placeholder.style.display = 'none';
-        btnStart.disabled = true; btnPhoto.disabled = false; btnVideo.disabled = false;
-        showStatus('✅ Cámara activa. Capture foto o video.', 'info');
-      } catch (err) {
-        showStatus('❌ Permiso denegado. Use HTTPS y permita cámara.', 'error');
-      }    });
+    const renderPhotoStrip = () => {
+      photoStrip.innerHTML = '';
+      capturedImages.forEach((img, idx) => {
+        const div = document.createElement('div');
+        div.className = 'photo-item';
+        const imge = document.createElement('img');
+        imge.src = img.url;
+        const badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.textContent = idx + 1;
+        div.appendChild(imge);
+        div.appendChild(badge);
+        photoStrip.appendChild(div);
+      });
+    };
 
-    btnPhoto.addEventListener('click', () => {
-      const c = document.createElement('canvas');
-      c.width = camera.videoWidth; c.height = camera.videoHeight;
-      c.getContext('2d').drawImage(camera, 0, 0);
-      c.toBlob(blob => {
-        mediaBlob = blob; mediaType = 'image';
-        preview.src = URL.createObjectURL(blob); preview.style.display = 'block'; camera.style.display = 'none';
-        btnReset.disabled = false; updateUI(); showStatus('📸 Foto capturada.', 'success');
+    const clearImages = () => {
+      capturedImages.forEach(img => URL.revokeObjectURL(img.url));
+      capturedImages = [];
+      renderPhotoStrip();
+      updateUI();
+      showStatus('🗑️ Todas las fotos eliminadas.', 'info');
+    };
+
+    const undoLastPhoto = () => {
+      if (capturedImages.length === 0) return;
+      const removed = capturedImages.pop();
+      URL.revokeObjectURL(removed.url);
+      renderPhotoStrip();
+      updateUI();
+      showStatus(`↩️ Última foto eliminada. Ahora tienes ${capturedImages.length}/${targetQty}.`, 'info');
+    };
+
+    const takePhoto = () => {
+      if (!stream) {
+        showStatus('❌ Primero inicia la cámara.', 'error');
+        return;
+      }
+      if (capturedImages.length >= targetQty) {
+        showStatus(`⚠️ Ya tienes ${targetQty} fotos. Usa "Limpiar todo" si quieres cambiar.`, 'error');
+        return;
+      }
+
+      const width = camera.videoWidth || 640;
+      const height = camera.videoHeight || 480;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(camera, 0, 0, width, height);
+      
+      canvas.toBlob(blob => {
+        if (!blob) {
+          showStatus('❌ Error al capturar foto.', 'error');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        capturedImages.push({ blob, url });
+        renderPhotoStrip();
+        updateUI();
+        showStatus(`📸 Foto ${capturedImages.length}/${targetQty} guardada.`, 'success');
+        if (capturedImages.length === targetQty) {
+          showStatus(`✅ Listo. Puedes enviar como collage.`, 'success');
+        }
       }, 'image/jpeg', 0.85);
-    });
+    };
 
-    btnVideo.addEventListener('click', () => {
-      if (!stream) return;
-      recordedChunks = [];
-      const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-      mediaRecorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 2500000 });
-      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-      mediaRecorder.onstop = () => {
-        mediaBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
-        mediaType = 'video';
-        preview.src = URL.createObjectURL(mediaBlob); preview.style.display = 'block'; camera.style.display = 'none';
-        btnReset.disabled = false; updateUI(); showStatus('🎥 Video capturado (3s).', 'success');
-      };
-      mediaRecorder.start(); showStatus('⏳ Grabando...', 'info');
-      setTimeout(() => { if(mediaRecorder?.state === 'recording') mediaRecorder.stop(); }, 3000);
-    });
+    // ---------- Crear collage (una sola imagen con todas las fotos) ----------
+    const createCollageBlob = async (images) => {
+      return new Promise((resolve, reject) => {
+        if (!images.length) reject('No hay imágenes');
+        if (images.length === 1) {
+          // Si es 1 foto, devolvemos la misma
+          resolve(images[0].blob);
+          return;
+        }
+        
+        // Cargar todas las imágenes como HTMLImageElement
+        const imgElements = [];
+        let loadedCount = 0;
+        
+        images.forEach((img, idx) => {
+          const imgEl = new Image();
+          imgEl.onload = () => {
+            loadedCount++;
+            if (loadedCount === images.length) {
+              // Todas cargadas, dibujar collage
+              const collageCanvas = document.createElement('canvas');
+              // Decidir layout: horizontal si son 2 o 3 (en fila)
+              // Para 2: dos columnas iguales; para 3: tres columnas iguales
+              const numCols = images.length;
+              const targetHeight = 400; // altura fija para el collage
+              const imgWidths = imgElements.map(img => (img.width * targetHeight) / img.height);
+              const totalWidth = imgWidths.reduce((a, b) => a + b, 0) + (numCols - 1) * 10; // 10px de separación
+              
+              collageCanvas.width = totalWidth;
+              collageCanvas.height = targetHeight;
+              const ctx = collageCanvas.getContext('2d');
+              ctx.fillStyle = '#1e293b';
+              ctx.fillRect(0, 0, totalWidth, targetHeight);
+              
+              let xOffset = 0;
+              for (let i = 0; i < imgElements.length; i++) {
+                const imgEl = imgElements[i];
+                const w = (imgEl.width * targetHeight) / imgEl.height;
+                ctx.drawImage(imgEl, xOffset, 0, w, targetHeight);
+                xOffset += w + 10;
+              }
+              
+              collageCanvas.toBlob(blob => {
+                resolve(blob);
+              }, 'image/jpeg', 0.9);
+            }
+          };
+          imgEl.onerror = () => reject(`Error cargando imagen ${idx+1}`);
+          imgEl.src = img.url;
+          imgElements.push(imgEl);
+        });
+      });
+    };
 
-    btnReset.addEventListener('click', () => {
-      mediaBlob = null; mediaType = null; preview.src = ''; preview.style.display = 'none';
-      if (stream) { camera.srcObject = stream; camera.style.display = 'block'; }
-      else placeholder.style.display = 'flex';
-      btnReset.disabled = true; updateUI(); showStatus('🗑️ Listo para nuevo registro.', 'info');
+    // ---------- Compartir a WhatsApp con collage opcional ----------
+    const shareToWhatsApp = async () => {
+      if (capturedImages.length !== targetQty) {
+        showStatus(`⚠️ Debes tomar exactamente ${targetQty} foto(s). Ahora tienes ${capturedImages.length}.`, 'error');
+        return;
+      }
+      if (!selectedOption) {
+        showStatus('⚠️ Selecciona un estado del reporte.', 'error');
+        return;
+      }
+
+      const fecha = new Date().toLocaleString();
+      let mensaje = `📋 *REPORTE DE VIGILANCIA*\n`;
+      mensaje += `Estado: ${selectedOption}\n`;
+      if (extraCommentInput.value.trim()) {
+        mensaje += `Detalle adicional: ${extraCommentInput.value.trim()}\n`;
+      }
+      mensaje += `📅 ${fecha}\n📍 (Ubicación aproximada del dispositivo)\n📸 ${capturedImages.length} foto(s) incluida(s).`;
+
+      showStatus('🖼️ Preparando collage...', 'info');
+      
+      try {
+        let fileToShare;
+        if (useCollageCheck.checked && capturedImages.length > 1) {
+          // Crear collage
+          const collageBlob = await createCollageBlob(capturedImages);
+          fileToShare = new File([collageBlob], `reporte_collage_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        } else {
+          // Modo original: enviar todas las fotos individualmente (puede causar mensajes separados)
+          // Pero el usuario activó el collage para evitarlo. No obstante, si no quiere collage, enviamos array de files.
+          const files = capturedImages.map((img, i) => 
+            new File([img.blob], `reporte_${i+1}.jpg`, { type: 'image/jpeg' })
+          );
+          if (navigator.canShare && navigator.canShare({ files: files })) {
+            await navigator.share({
+              title: 'Reporte de Vigilancia',
+              text: mensaje,
+              files: files
+            });
+            showStatus('✅ Enviado (modo individual).', 'success');
+            return;
+          } else {
+            throw new Error('No soporta compartir múltiples archivos');
+          }
+        }
+        
+        // Compartir collage (un solo archivo)
+        if (navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
+          await navigator.share({
+            title: 'Reporte de Vigilancia',
+            text: mensaje,
+            files: [fileToShare]
+          });
+          showStatus('✅ ¡Enviado! Collage + comentario en un solo mensaje.', 'success');
+        } else {
+          throw new Error('No soporta compartir archivos');
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error(err);
+          showStatus('❌ Error al compartir. Fallback: descarga manual.', 'error');
+          // Fallback: descargar collage o fotos
+          if (useCollageCheck.checked && capturedImages.length > 1) {
+            const collageBlob = await createCollageBlob(capturedImages);
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(collageBlob);
+            a.download = `reporte_collage.jpg`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+          } else {
+            capturedImages.forEach((img, i) => {
+              const a = document.createElement('a');
+              a.href = img.url;
+              a.download = `reporte_${i+1}.jpg`;
+              a.click();
+            });
+          }
+          navigator.clipboard.writeText(mensaje);
+          showStatus('📋 Texto copiado y fotos descargadas. Adjúntalas manualmente en WhatsApp.', 'info');
+        }
+      }
+    };
+
+    // ---------- Cámara ----------
+    const startCamera = async () => {
+      try {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        camera.srcObject = stream;
+        camera.style.display = 'block';
+        placeholder.style.display = 'none';
+        btnStart.disabled = true;
+        btnPhoto.disabled = false;
+        showStatus(`✅ Cámara activa. Toma ${targetQty} foto(s).`, 'info');
+        updateUI();
+      } catch (err) {
+        console.error(err);
+        showStatus('❌ Permiso denegado o sin cámara. Usa HTTPS y permite el acceso.', 'error');
+        btnStart.disabled = false;
+      }
+    };
+
+    // ---------- Cambiar cantidad objetivo ----------
+    const setTargetQuantity = (qty) => {
+      targetQty = qty;
+      qtyBtns.forEach(btn => {
+        if (parseInt(btn.dataset.qty) === qty) {
+          btn.classList.add('selected');
+        } else {
+          btn.classList.remove('selected');
+        }
+      });
+      if (capturedImages.length > targetQty) {
+        clearImages();
+        showStatus(`Cambiaste a ${targetQty} foto(s). Se borraron las fotos sobrantes.`, 'info');
+      } else {
+        updateUI();
+        showStatus(`Ahora debes tomar ${targetQty} foto(s).`, 'info');
+      }
+    };
+
+    // ---------- Eventos ----------
+    btnStart.addEventListener('click', startCamera);
+    btnPhoto.addEventListener('click', takePhoto);
+    btnUndo.addEventListener('click', undoLastPhoto);
+    btnReset.addEventListener('click', clearImages);
+    btnSend.addEventListener('click', shareToWhatsApp);
+
+    qtyBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const qty = parseInt(btn.dataset.qty);
+        setTargetQuantity(qty);
+      });
     });
 
     optionsGrid.querySelectorAll('.option-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         optionsGrid.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected'); selectedOption = btn.dataset.value; updateUI();
+        btn.classList.add('selected');
+        selectedOption = btn.dataset.value;
+        updateUI();
       });
     });
 
-    btnSend.addEventListener('click', async () => {
-      const chatId = chatIdInput.value.trim();
-      if (!chatId || !selectedOption || !mediaBlob) {
-        showStatus('❌ Complete todos los campos y capture media.', 'error'); return;
-      }
-
-      showStatus('⏳ Procesando y enviando...', 'info'); btnSend.disabled = true;
-      try {
-        const base64 = await new Promise((res, rej) => {
-          const reader = new FileReader();
-          reader.onload = () => res(reader.result);
-          reader.onerror = rej;
-          reader.readAsDataURL(mediaBlob);
-        });
-
-        const res = await fetch('/api/send-telegram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, status: selectedOption, mediaType, base64 })
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Fallo en servidor');
-        showStatus('✅ Enviado silenciosamente a Telegram.', 'success');
-      } catch (err) {
-        showStatus(`❌ ${err.message}`, 'error');
-      } finally {
-        btnSend.disabled = false;
-      }
+    window.addEventListener('beforeunload', () => {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      capturedImages.forEach(img => URL.revokeObjectURL(img.url));
     });
   </script>
 </body>
